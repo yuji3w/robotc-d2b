@@ -10,7 +10,6 @@ The parameters in the macros need to be changed for different use cases.
 
 #define WHEEL 18.0
 #define AXLE (12.0+.5-.25)
-//(12+.5+.25-.125)
 #define MINDETECTIONS1 20
 #define MINDETECTIONS2 22
 
@@ -70,13 +69,11 @@ int terribleOffset = 0;
 
 task main()
 {
-
 	sleep(500);
 	do{
 		tableReflectS1 = getColorReflected(S1)/2;
 		tableReflectS4 = getColorReflected(S4)/2;
-	}while(tableReflectS1<10 && tableReflectS4<10);
-
+	}while(tableReflectS1<20 && tableReflectS4<20);
 	selectPath();
 	selectClamp();
 
@@ -87,6 +84,9 @@ task main()
 	{
 		rightPath();
 	}
+	moveRob(-30,30);
+	rotateRight(AXLE/2,90,40);
+	moveUntilBlack(40);
 }
 
 void moveEndFromRight(int zone)
@@ -113,12 +113,12 @@ void moveEndFromLeft(int zone)
 {
 	if(zone==3)
 	{
-		lineFollowS1(50,40,30/3);
+		lineFollowS1(50,40,20/3);
 		moveRob(2,20);
 		clampOut();
 	}else
 	{
-		float distance = (3-zone)*(TABLEWIDTH/4)-AXLE+5;
+		float distance = (3-zone)*(TABLEWIDTH/4)-AXLE+2;
 		rotateRight(AXLE/2,90,30);
 		moveRob(distance,100);
 		rotateLeft(AXLE/2,90,zone==1?15:30);
@@ -133,6 +133,7 @@ void stopDrive()
 	setMotorSpeed(motorA,0);
 	setMotorSpeed(motorD,0);
 }
+
 void displayNos(int btn){
 	displayCenteredBigTextLine(0, "0 is left: %d", sweepNo);
 	displayCenteredBigTextLine(2, "1,2,4,8: %d", pow(2,zoneNo));
@@ -200,10 +201,7 @@ void escalatorDown()
 
 void clampDown()
 {
-	setMotorSpeed(motorA,0);
-	setMotorSpeed(motorD,0);
 	setMotorSpeed(motorC,-100);
-	sleep(500);
 }
 
 void clampOut()
@@ -303,24 +301,14 @@ void lineFollowS1(float speed, float length, float sensitivity)
 {
 	resetMotorEncoder(motorD);
 	length = length * (360.0 / WHEEL);
-	float gain = 0.7;
-	float error;
 	while(getMotorEncoder(motorD) < length && getColorReflected(S4)/tableReflectS4>0.5)
 	{
-		error = 2.0 * (getColorReflected(S1) / tableReflectS1 - 0.5);
-		if(error < 0){
-			setMotorSpeed(motorA,speed);
-			setMotorSpeed(motorD,getMotorRPM(motorA)*(1.0- error * gain));
-		}else
-		{
-			setMotorSpeed(motorD,speed);
-			setMotorSpeed(motorA,getmotorRPM(motorD)*(1.0+ error * gain));
-		}
-//		float offset =  getColorReflected(S1)/tableReflectS1;
-//		offset-=1.0;
-//		offset*=sensitivity;
-//		setMotorSpeed(motorA, speed + offset);
-//		setMotorSpeed(motorD, speed);
+		float offset =  getColorReflected(S1)/tableReflectS1;
+		offset-=1.0;
+		offset*=sensitivity;
+		//TODO:
+		setMotorSpeed(motorA, speed + offset);
+		setMotorSpeed(motorD, speed);
 	}
 }
 
@@ -442,7 +430,7 @@ void leftPath()
 {
 	rotateRight(AXLE/2+30-terribleOffset+2,90,60);
 
-	lineFollowS1(60,80.0/2,40);
+	lineFollowS1(60,80.0/2,30);
 	lineFollowS1(50,80.0/2,30/3);
 	clampDown();
 	moveEndFromLeft(zoneNo);
@@ -479,6 +467,7 @@ void selectClamp()
 		{
 			selectClampNos(buttonRight);
 			clampDown();
+			sleep(500);
 			moveUntilBlack(25);
 			return;
 		}else if(getButtonPress(buttonLeft)==true)
@@ -488,15 +477,18 @@ void selectClamp()
 			moveRob(-17,20);
 			sleep(2000);
 			clampDown();
+			sleep(500);
 			escalatorUp();
 			moveRob(16,20);
 			clampOutStart();
 			moveRob(-8,50);
 			clampDown();
+			sleep(500);
 			escalatorDown();
 			clampOutStart();
 			moveRob(9,50);
 			clampDown();
+			sleep(500);
 			//remove after or else
 			terribleOffset = 7;
 			return;

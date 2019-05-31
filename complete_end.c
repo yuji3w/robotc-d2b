@@ -55,28 +55,105 @@ void clampDown();
 void clampOut();
 void selectPath();
 void stopDrive();
-void moveUntilBlack(int speed);
-void clampOutStart();
-void leftPath();
-void rightPath();
-void selectClamp();
-void displayNos(int btn);
-void selectClampNos(int btn);
 
 int zoneNo = 0;
 int sweepNo = 0;
 
 int terribleOffset = 0;
 
+void clampOutStart()
+{
+	setMotorSpeed(motorC,10);
+	sleep(700);
+	setMotorSpeed(motorC,0);
+}
+
+void moveUntilBlack(int speed)
+{
+	playSound(soundBeepBeep);
+	setMotorSpeed(motorA,speed);
+	setMotorSpeed(motorD,speed);
+	while(getColorReflected(S1)>tableReflectS1 || getColorReflected(S4)>tableReflectS4){}
+	setMotorSpeed(motorA,0);
+	setMotorSpeed(motorD,0);
+}
+
+void moveUntilAnyBlack(int speed)
+{
+	playSound(soundBeepBeep);
+	setMotorSpeed(motorA,speed);
+	setMotorSpeed(motorD,speed);
+	while(getColorReflected(S1)>tableReflectS1 && getColorReflected(S4)>tableReflectS4){}
+	setMotorSpeed(motorA,0);
+	setMotorSpeed(motorD,0);
+}
+
+void leftPath()
+{
+	//Henceforth I shall go along the left
+	rotateRight(AXLE/2+30-terribleOffset+2,90,60);
+	lineFollowS1(40,80.0/2,30);
+	lineFollowS1(20,80.0/2,30/4);
+	clampDown();
+	moveEndFromLeft(zoneNo);
+	stopDrive();
+	//Henceforth I stop going along left
+}
+
+void rightPath()
+{
+	rotateRight(30,180,50);
+	moveRob(20,50);
+	alignFront(10000);
+	rotateLeft(0,90,20);
+	lineFollowS4(40,45.0/2,20);
+	lineFollowS4(20,45.0/2,20/4);
+	clampDown();
+	moveEndFromRight(zoneNo);
+}
+
+void selectClamp()
+{
+	displayCenteredBigTextLine(0,"Right for clamp");
+	displayCenteredBigTextLine(0,"Left for going out\n and back in");
+	while(getButtonPress(buttonEnter)==false)
+	{
+		if(getButtonPress(buttonRight)==true)
+		{
+			clampDown();
+		}else if(getButtonPress(buttonLeft)==true)
+		{
+			moveRob(18,50);
+			moveRob(-17,20);
+			sleep(2000);
+			clampDown();
+			escalatorUp();
+			moveRob(16,20);
+			clampOutStart();
+			moveRob(-8,50);
+			clampDown();
+			escalatorDown();
+			clampOutStart();
+			moveRob(9,50);
+			clampDown();
+			//remove after or else
+			terribleOffset = 7;
+			return;
+		}else if(getButtonPress(buttonEnter)==true)
+		{
+			moveRob(10,50);
+			alignFront(10000);
+			return;
+		}
+	}
+}
+
 task main()
 {
 
 	sleep(500);
-	do{
-		tableReflectS1 = getColorReflected(S1)/2;
-		tableReflectS4 = getColorReflected(S4)/2;
-	}while(tableReflectS1<10 && tableReflectS4<10);
-
+	tableReflectS1 = getColorReflected(S1)/2;
+	tableReflectS4 = getColorReflected(S4)/2;
 	selectPath();
 	selectClamp();
 
@@ -87,18 +164,61 @@ task main()
 	{
 		rightPath();
 	}
+
+	moveRob(-20,20);
+	rotateLeft(0,90,20);
+	moveUntilAnyBlack(30);
+
+
+
+	//Henceforth I start going along right
+	/*
+
+	*/
+	//we'll reset after this anyways
+
+
+	/*clampDown();
+	escalatorUp();
+	moveRob(5,30);
+	clampOut();
+	clampDown();
+	escalatorDown();*/
+
+	//lineFollowS4(50);
+
+	/*for(int i = 0; i < 4; i++)
+	{
+	moveRob(15.24,30);
+	rotateRob(90,-30);
+	}
+	//lineFollowS4(50);
+	lineFollowS4(50);
+	//lineFollow will not work with high speeds. TODO: Fix this.
+	altLineFollow(50);
+	//lineFollow will not work with high speeds. TODO: Fix this.
+	if(onTable(S1))
+	{
+	//Do stuff
+	}
+	//onTable returns true if the sensor is on the table. Sample use case above.
+	alignFront(1000);
+	//sample alignFront for 1 second.
+	followEdge(100,S1,50);
+	//followEdge for 100 cm using S1 to guide and S4 to find the edge at 50 speed.
+	//followEdge is not ideal. Improve if you can.*/
 }
 
 void moveEndFromRight(int zone)
 {
 	if(zone==0)
 	{
-		lineFollowS4(40,45.0,30/3);
+		moveUntilBlack(30);
 		moveRob(2,20);
 		clampOut();
 	}else
 	{
-		float distance = zone*(TABLEWIDTH/4)-AXLE+5;
+		float distance = zone*TABLEWIDTH/4*1.1-AXLE-AXLE/2+7;
 		rotateLeft(AXLE/2,90,40);
 		moveRob(distance,50);
 		rotateRight(AXLE/2,90,40);
@@ -113,15 +233,15 @@ void moveEndFromLeft(int zone)
 {
 	if(zone==3)
 	{
-		lineFollowS1(50,40,30/3);
+		moveUntilBlack(30);
 		moveRob(2,20);
 		clampOut();
 	}else
 	{
-		float distance = (3-zone)*(TABLEWIDTH/4)-AXLE+5;
+		float distance = (3-zone)*TABLEWIDTH/4*1.1-AXLE-AXLE/2+7;
 		rotateRight(AXLE/2,90,30);
-		moveRob(distance,100);
-		rotateLeft(AXLE/2,90,zone==1?15:30);
+		moveRob(distance,50);
+		rotateLeft(AXLE/2,90,30);
 		moveUntilBlack(20);
 		moveRob(2,20);
 		clampOut();
@@ -133,24 +253,17 @@ void stopDrive()
 	setMotorSpeed(motorA,0);
 	setMotorSpeed(motorD,0);
 }
-void displayNos(int btn){
-	displayCenteredBigTextLine(0, "0 is left: %d", sweepNo);
-	displayCenteredBigTextLine(2, "1,2,4,8: %d", pow(2,zoneNo));
-	while(getButtonPress(btn)){
-		sleep(10);
-	}
-}
+
 void selectPath()
 {
-	displayNos(buttonEnter);
-	while(1)
+	while(getButtonPress(buttonEnter)==false)
 	{
-
+		displayCenteredBigTextLine(0, "0 is left: %d", sweepNo);
+		displayCenteredBigTextLine(2, "1,2,4,8: %d", pow(2,zoneNo));
 		if(getButtonPress(buttonUp)==true)
 		{
 			zoneNo++;
 			zoneNo%=4;
-			displayNos(buttonUp);
 		}else if(getButtonPress(buttonDown)==true)
 		{
 			zoneNo--;
@@ -158,12 +271,10 @@ void selectPath()
 			{
 				zoneNo = 3;
 			}
-			displayNos(buttonDown);
 		}else if(getButtonPress(buttonRight)==true)
 		{
 			sweepNo++;
 			sweepNo%=2;
-			displayNos(buttonRight);
 		}else if(getButtonPress(buttonLeft)==true)
 		{
 			sweepNo--;
@@ -171,13 +282,11 @@ void selectPath()
 			{
 				sweepNo=1;
 			}
-			displayNos(buttonLeft);
 		}
-		else if(getButtonPress(buttonEnter)==true){
-			displayNos(buttonEnter);
-			return;
-		}
+		sleep(100);
 	}
+	sleep(500);
+
 }
 
 void escalatorUp()
@@ -200,8 +309,6 @@ void escalatorDown()
 
 void clampDown()
 {
-	setMotorSpeed(motorA,0);
-	setMotorSpeed(motorD,0);
 	setMotorSpeed(motorC,-100);
 	sleep(500);
 }
@@ -303,24 +410,14 @@ void lineFollowS1(float speed, float length, float sensitivity)
 {
 	resetMotorEncoder(motorD);
 	length = length * (360.0 / WHEEL);
-	float gain = 0.7;
-	float error;
-	while(getMotorEncoder(motorD) < length && getColorReflected(S4)/tableReflectS4>0.5)
+	while(getMotorEncoder(motorD) < length)
 	{
-		error = 2.0 * (getColorReflected(S1) / tableReflectS1 - 0.5);
-		if(error < 0){
-			setMotorSpeed(motorA,speed);
-			setMotorSpeed(motorD,getMotorRPM(motorA)*(1.0- error * gain));
-		}else
-		{
-			setMotorSpeed(motorD,speed);
-			setMotorSpeed(motorA,getmotorRPM(motorD)*(1.0+ error * gain));
-		}
-//		float offset =  getColorReflected(S1)/tableReflectS1;
-//		offset-=1.0;
-//		offset*=sensitivity;
-//		setMotorSpeed(motorA, speed + offset);
-//		setMotorSpeed(motorD, speed);
+		float offset =  getColorReflected(S1)/tableReflectS1;
+		offset-=1.0;
+		offset*=sensitivity;
+		//TODO:
+		setMotorSpeed(motorA, speed + offset);
+		setMotorSpeed(motorD, speed);
 	}
 }
 
@@ -328,7 +425,7 @@ void lineFollowS4(float speed, float length, float sensitivity)
 {
 	resetMotorEncoder(motorA);
 	length = length * (360.0 / WHEEL);
-	while(getMotorEncoder(motorA) < length && getColorReflected(S1)/tableReflectS1>0.5)
+	while(/*getColorReflected(S1)>tableReflectS1/2 && */getMotorEncoder(motorA) < length)
 	{
 		float offset =  getColorReflected(S4)/tableReflectS4;
 		offset-=1.0;
@@ -418,93 +515,4 @@ void followEdge(float distance, int sensor, int speed)
 	}
 	setMotorSpeed(motorA,0);
 	setMotorSpeed(motorD,0);
-}
-
-void moveUntilBlack(int speed)
-{
-	playSound(soundBeepBeep);
-	setMotorSpeed(motorA,speed);
-	setMotorSpeed(motorD,speed);
-	while(getColorReflected(S1)>tableReflectS1 && getColorReflected(S4)>tableReflectS4){}
-	setMotorSpeed(motorA,0);
-	setMotorSpeed(motorD,0);
-	alignFront(2000);
-}
-
-void clampOutStart()
-{
-	setMotorSpeed(motorC,10);
-	sleep(700);
-	setMotorSpeed(motorC,0);
-}
-
-void leftPath()
-{
-	rotateRight(AXLE/2+30-terribleOffset+2,90,60);
-
-	lineFollowS1(60,80.0/2,40);
-	lineFollowS1(50,80.0/2,30/3);
-	clampDown();
-	moveEndFromLeft(zoneNo);
-	stopDrive();
-
-	//Henceforth I stop going along left
-}
-
-void rightPath()
-{
-	rotateRight(30,180,50);
-	moveUntilBlack(30);
-	rotateLeft(0,90,20);
-	lineFollowS4(50,45.0/2,40);
-	lineFollowS4(40,45.0/2,30/3);
-	clampDown();
-	moveEndFromRight(zoneNo);
-}
-
-void selectClampNos(int btn){
-	displayCenteredBigTextLine(0,"Right for clamp");
-	displayCenteredBigTextLine(0,"Left for going out\n and back in");
-	while(getButtonPress(btn)){
-		sleep(10);
-	}
-}
-
-void selectClamp()
-{
-	selectClampNos(buttonEnter);
-	while(1)
-	{
-		if(getButtonPress(buttonRight)==true)
-		{
-			selectClampNos(buttonRight);
-			clampDown();
-			moveUntilBlack(25);
-			return;
-		}else if(getButtonPress(buttonLeft)==true)
-		{
-			selectClampNos(buttonLeft);
-			moveRob(18,50);
-			moveRob(-17,20);
-			sleep(2000);
-			clampDown();
-			escalatorUp();
-			moveRob(16,20);
-			clampOutStart();
-			moveRob(-8,50);
-			clampDown();
-			escalatorDown();
-			clampOutStart();
-			moveRob(9,50);
-			clampDown();
-			//remove after or else
-			terribleOffset = 7;
-			return;
-		}else if(getButtonPress(buttonEnter)==true)
-		{
-			selectClampNos(buttonEnter);
-			moveUntilBlack(25);
-			return;
-		}
-	}
 }
